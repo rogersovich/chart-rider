@@ -189,7 +189,7 @@ export default function GameContainer({ track }: GameContainerProps) {
       window.removeEventListener('resize', handleResize);
       engine.cleanup();
     };
-  }, [track, minimapPrices, period, isSmoothed]);
+  }, [track, minimapPrices, period, isSmoothed, isMounted]);
 
   // ESC + M key handling
   useEffect(() => {
