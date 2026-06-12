@@ -10,12 +10,12 @@ export const GAME_CONSTANTS = {
   
   // Bike Action & Controls
   ACCELERATION_TORQUE: 0.30,     // Torque applied to wheels
-  MAX_SPEED: 26,                 // Max horizontal speed (velocity x cap)
+  MAX_SPEED: 18,                 // Max horizontal speed (velocity x cap)
   BRAKE_DAMPING: 0.92 ,           // Velocity damping when braking
   LEAN_SPEED_AIR: 0.18,          // Angular velocity delta per frame in air (W/S/A/D/Arrows)
   LEAN_SPEED_GROUND: 0.20,       // Angular velocity delta per frame on ground
   LEAN_MAX_VELOCITY: 0.45,       // Maximum angular velocity limit for flips
-  JUMP_IMPULSE: -0.20 ,            // Upward vertical force applied on chassis (Space)
+  JUMP_IMPULSE: -0.15 ,            // Upward vertical force applied on chassis (Space)
   
   // Suspension spring constraints
   SUSPENSION_STIFFNESS: 0.18,    // Stiffness coefficient of constraints
@@ -27,6 +27,7 @@ export const GAME_CONSTANTS = {
   NITRO_CONSUMPTION: 0.5,        // Fuel consumed per frame
   NITRO_RECHARGE_RATE: 0.12,     // Fuel recharged per frame when grounded
   NITRO_ACCEL_FORCE: 0.006,      // Extra horizontal thrust force during Nitro
+  GROUND_TRACTION_FORCE: 0.004,  // Traction multiplier: force = torque × this (helps climb slopes)
   
   // Option B Crash Penalties & Recovery thresholds
   FLIP_CRASH_ANGLE: 1.5,         // Angle deviation threshold for terguling (~90deg)
@@ -34,9 +35,9 @@ export const GAME_CONSTANTS = {
   CLIFF_CRASH_PENALTY: 500,      // Points deducted when bike falls off grid (jurang)
   
   // Map Scaling & Coordinates (Normalization)
-  SEGMENT_SPACING: 20,          // Horizontal space between price indices (width)
+  SEGMENT_SPACING: 40,         // Horizontal space between price indices (width)
   CANVAS_HEIGHT: 600,            // Rendering height of HTML5 Canvas
-  TRACK_PADDING_Y: 180,          // Padding from bottom/top to compress track vertical amplitude
+  TRACK_PADDING_Y: 80,          // Padding from bottom/top to compress track vertical amplitude
   TRACK_HEIGHT_LIMIT: 400,       // Amplitude height limit for pricing range
   
   // Scoring points metrics

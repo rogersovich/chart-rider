@@ -32,17 +32,52 @@ export const mockTracks: Track[] = [
     ticker: 'TSLA',
     name: 'Tesla Motors Inc.',
     period: '1Y',
-    changePercent: 22.3,
-    difficulty: 'Hard',
+    changePercent: 75.0,
+    difficulty: 'Insane',
     volatility: 3.8,
     assetType: 'stock',
-    prices: [150, 155, 148, 162, 170, 165, 158, 175, 188, 180, 195, 210, 202, 198, 220, 235, 228, 245, 260, 250, 240, 255, 270, 265, 258, 272, 285, 278, 290, 310, 302, 320, 340, 332, 325, 345, 360, 352, 368, 385, 372, 390, 410, 398, 415, 430, 422, 440, 455, 445],
-    dates: Array.from({ length: 50 }, (_, i) => `2025-${String(Math.floor(i/4)+1).padStart(2, '0')}-${String((i%4)*7+1).padStart(2, '0')}`),
-    minPrice: 148,
-    maxPrice: 455,
-    startDate: '2025-06-01',
-    endDate: '2026-06-01',
-    description: 'Rally Tesla yang legendaris dengan akselerasi tanjakan terjal dan beberapa koreksi tajam. Sempurna untuk melakukan lompatan tinggi!',
+    prices: [
+      // Jun 2024 (21 days) — base building ~$180-209
+      180, 182, 179, 183, 186, 185, 188, 191, 189, 193, 197, 195, 193, 198, 202, 200, 198, 204, 207, 205, 209,
+      // Jul 2024 (23 days) — summer rally ~$212-256
+      212, 215, 218, 222, 219, 225, 228, 232, 229, 235, 240, 238, 243, 248, 252, 248, 244, 241, 237, 242, 247, 251, 256,
+      // Aug 2024 (22 days) — pullback & recovery ~$212-252
+      252, 248, 242, 238, 232, 228, 224, 221, 218, 215, 212, 218, 222, 226, 230, 234, 228, 224, 220, 225, 229, 234,
+      // Sep 2024 (20 days) — slow climb ~$238-271
+      238, 242, 246, 250, 247, 252, 248, 244, 249, 254, 258, 255, 260, 257, 262, 267, 264, 261, 266, 271,
+      // Oct 2024 (23 days) — pre-election momentum ~$261-295
+      268, 264, 261, 265, 270, 274, 272, 269, 274, 280, 276, 272, 268, 273, 278, 284, 280, 276, 282, 288, 293, 290, 295,
+      // Nov 2024 (21 days) — election night MEGA rally ~$295-410
+      295, 312, 325, 338, 332, 345, 358, 365, 360, 372, 385, 379, 368, 380, 392, 386, 375, 388, 401, 396, 410,
+      // Dec 2024 (22 days) — peak euphoria ~$418-482
+      418, 424, 432, 428, 440, 448, 455, 460, 452, 445, 458, 470, 465, 475, 482, 478, 465, 458, 445, 438, 428, 421,
+      // Jan 2025 (22 days) — choppy plateau ~$400-432
+      415, 420, 428, 422, 415, 408, 400, 412, 420, 415, 408, 418, 425, 432, 428, 420, 412, 418, 424, 418, 410, 405,
+      // Feb 2025 (20 days) — correction begins ~$288-385
+      385, 372, 358, 348, 338, 325, 315, 308, 320, 332, 325, 312, 302, 295, 308, 320, 315, 308, 298, 288,
+      // Mar 2025 (21 days) — bear market territory ~$245-278
+      278, 268, 260, 252, 245, 258, 268, 275, 265, 258, 248, 255, 262, 270, 265, 258, 252, 260, 268, 275, 270,
+      // Apr 2025 (20 days) — bottoming out ~$222-265
+      265, 258, 248, 240, 232, 228, 235, 242, 248, 245, 238, 232, 228, 222, 228, 235, 242, 248, 255, 252,
+      // May 2025 (17 days) — recovery rally ~$262-320
+      262, 270, 278, 285, 292, 288, 295, 302, 298, 292, 285, 292, 300, 308, 315, 320, 315,
+    ],
+    dates: (() => {
+      const result: string[] = [];
+      const d = new Date('2024-06-03');
+      while (result.length < 252) {
+        if (d.getDay() !== 0 && d.getDay() !== 6) {
+          result.push(d.toISOString().slice(0, 10));
+        }
+        d.setDate(d.getDate() + 1);
+      }
+      return result;
+    })(),
+    minPrice: 179,
+    maxPrice: 482,
+    startDate: '2024-06-03',
+    endDate: '2025-05-30',
+    description: 'Data harian nyata Tesla Jun 2024–Mei 2025. Nikmati rally election night November yang meroket ke $482, lalu koreksi brutal hingga $222 di April 2025!',
   },
   {
     ticker: 'BTC',

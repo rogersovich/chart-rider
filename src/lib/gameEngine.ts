@@ -31,6 +31,7 @@ export class GameEngine {
   private ctx: CanvasRenderingContext2D;
   private track: Track;
   private prices: number[];
+  private isSmoothed: boolean = false;
   private coordinates: { x: number; y: number }[] = [];
   
   // Game states
@@ -90,6 +91,7 @@ export class GameEngine {
     this.ctx = context;
     
     this.track = options.track;
+    this.isSmoothed = options.isSmoothed;
     this.onTelemetry = options.onTelemetry;
     this.onGameOver = options.onGameOver;
 
@@ -444,7 +446,12 @@ export class GameEngine {
 
     // 1. Acceleration / Throttle
     if (this.keys['ArrowUp'] || this.keys['KeyW']) {
-      let torque = GAME_CONSTANTS.ACCELERATION_TORQUE;
+      // Smooth mode has long constant slopes with no micro-downhills to recover speed,
+      // so boost base torque to compensate for the sustained gradient climb.
+      const baseTorque = this.isSmoothed
+        ? GAME_CONSTANTS.ACCELERATION_TORQUE * 1.2
+        : GAME_CONSTANTS.ACCELERATION_TORQUE;
+      let torque = baseTorque;
       
       if (isNitroPressed && this.nitro > 0) {
         if (this.status !== 'Nitro Boost') AudioEngine.getInstance().startNitro();
@@ -478,7 +485,16 @@ export class GameEngine {
         this.status = this.isGrounded ? 'Grounded' : 'Airborne';
       }
 
+      // Only rear wheel drives — front wheel torque caused bike to break apart
       this.bike.wheelA.torque = torque;
+
+      // Small chassis assist on ground (chassis-only, never wheels directly)
+      if (this.isGrounded) {
+        Body.applyForce(this.bike.chassis, this.bike.chassis.position, {
+          x: GAME_CONSTANTS.GROUND_TRACTION_FORCE,
+          y: 0,
+        });
+      }
     } 
     // 2. Brake / Reverse
     else if (this.keys['ArrowDown'] || this.keys['KeyS']) {
