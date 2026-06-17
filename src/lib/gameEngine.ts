@@ -108,8 +108,10 @@ export class GameEngine {
     // Setup track dynamic duration: proportional to length
     this.totalDuration = 30 + Math.floor(this.prices.length / 5) * 2;
 
-    // Initialize Matter.js
-    this.engine = Engine.create();
+    // Initialize Matter.js with higher constraint iterations for rigidity
+    this.engine = Engine.create({
+      constraintIterations: 8
+    });
     this.world = this.engine.world;
     this.world.gravity.y = GAME_CONSTANTS.GRAVITY_Y;
 
@@ -192,18 +194,18 @@ export class GameEngine {
       World.add(this.world, segment);
     }
 
-    // Set initial checkpoint centered on starting runway
+    // Set initial checkpoint centered on starting runway (spawn cleanly above ground to avoid startup physics squish)
     if (this.coordinates.length > 1) {
       const runwayStart = this.coordinates[0].x;
       const runwayEnd = this.coordinates[1].x;
       this.lastCheckpoint = {
         x: (runwayStart + runwayEnd) / 2,
-        y: this.coordinates[1].y - 46
+        y: this.coordinates[1].y - 75
       };
     } else if (this.coordinates.length > 0) {
       this.lastCheckpoint = {
         x: this.coordinates[0].x,
-        y: this.coordinates[0].y - 46
+        y: this.coordinates[0].y - 75
       };
     }
   }
@@ -221,18 +223,20 @@ export class GameEngine {
       label: 'chassis'
     });
 
-    // Wheels
-    const wheelA = Bodies.circle(startX - 35, startY + 38, GAME_CONSTANTS.WHEEL_RADIUS, {
+    // Wheels (Rear-Heavy weight distribution & grip configuration for Hill Climb Racing feel)
+    // We use lightweight wheels (density 0.001 and 0.0006) relative to the heavy chassis (density 0.008)
+    // to establish a realistic mass ratio where the chassis has enough inertia to carry the wheels during airborne leaning.
+    const wheelA = Bodies.circle(startX - 35, startY + 32, GAME_CONSTANTS.WHEEL_RADIUS, {
       collisionFilter: { group },
-      density: GAME_CONSTANTS.WHEEL_DENSITY,
-      friction: GAME_CONSTANTS.WHEEL_FRICTION,
+      density: 0.001, // Rear wheel is heavier (shifting center of mass backwards)
+      friction: 0.99,  // Maximum grip friction for traction
       restitution: GAME_CONSTANTS.WHEEL_RESTITUTION,
       label: 'wheel'
     });
 
-    const wheelB = Bodies.circle(startX + 35, startY + 38, GAME_CONSTANTS.WHEEL_RADIUS, {
+    const wheelB = Bodies.circle(startX + 35, startY + 32, GAME_CONSTANTS.WHEEL_RADIUS, {
       collisionFilter: { group },
-      density: GAME_CONSTANTS.WHEEL_DENSITY,
+      density: 0.0006, // Front wheel is lighter (easier to lift and steer)
       friction: GAME_CONSTANTS.WHEEL_FRICTION,
       restitution: GAME_CONSTANTS.WHEEL_RESTITUTION,
       label: 'wheel'
@@ -262,7 +266,7 @@ export class GameEngine {
       bodyA: chassis,
       pointA: { x: -10, y: 0 },
       bodyB: wheelA,
-      stiffness: 0.45,
+      stiffness: 1.0,
       damping: 0.8,
       length: 40.6
     });
@@ -271,7 +275,7 @@ export class GameEngine {
       bodyA: chassis,
       pointA: { x: 10, y: 0 },
       bodyB: wheelB,
-      stiffness: 0.45,
+      stiffness: 1.0,
       damping: 0.8,
       length: 40.6
     });
@@ -323,18 +327,19 @@ export class GameEngine {
     const pos = this.bike.chassis.position;
     
     // Teleport higher above current spot to avoid ground clipping/overlap
-    const targetY = pos.y - 80;
+    const terrainY = this.getTerrainY(pos.x);
+    const targetY = Math.min(pos.y - 80, terrainY - 80);
     
     Body.setPosition(this.bike.chassis, { x: pos.x, y: targetY });
     Body.setAngle(this.bike.chassis, 0);
     Body.setVelocity(this.bike.chassis, { x: 2, y: -2 }); // small kickstart
     Body.setAngularVelocity(this.bike.chassis, 0);
 
-    Body.setPosition(this.bike.wheelA, { x: pos.x - 35, y: targetY + 38 });
+    Body.setPosition(this.bike.wheelA, { x: pos.x - 35, y: targetY + 32 });
     Body.setVelocity(this.bike.wheelA, { x: 0, y: 0 });
     Body.setAngularVelocity(this.bike.wheelA, 0);
 
-    Body.setPosition(this.bike.wheelB, { x: pos.x + 35, y: targetY + 38 });
+    Body.setPosition(this.bike.wheelB, { x: pos.x + 35, y: targetY + 32 });
     Body.setVelocity(this.bike.wheelB, { x: 0, y: 0 });
     Body.setAngularVelocity(this.bike.wheelB, 0);
 
@@ -370,11 +375,11 @@ export class GameEngine {
     Body.setVelocity(this.bike.chassis, { x: 0, y: 0 });
     Body.setAngularVelocity(this.bike.chassis, 0);
 
-    Body.setPosition(this.bike.wheelA, { x: targetX - 35, y: targetY + 38 });
+    Body.setPosition(this.bike.wheelA, { x: targetX - 35, y: targetY + 32 });
     Body.setVelocity(this.bike.wheelA, { x: 0, y: 0 });
     Body.setAngularVelocity(this.bike.wheelA, 0);
 
-    Body.setPosition(this.bike.wheelB, { x: targetX + 35, y: targetY + 38 });
+    Body.setPosition(this.bike.wheelB, { x: targetX + 35, y: targetY + 32 });
     Body.setVelocity(this.bike.wheelB, { x: 0, y: 0 });
     Body.setAngularVelocity(this.bike.wheelB, 0);
 
@@ -418,6 +423,24 @@ export class GameEngine {
     return Math.min(100, Math.max(0, Math.round(progress * 100)));
   }
 
+  private getTerrainY(x: number): number {
+    if (this.coordinates.length === 0) return GAME_CONSTANTS.CANVAS_HEIGHT;
+    if (x <= this.coordinates[0].x) return this.coordinates[0].y;
+    if (x >= this.coordinates[this.coordinates.length - 1].x) {
+      return this.coordinates[this.coordinates.length - 1].y;
+    }
+    for (let i = 0; i < this.coordinates.length - 1; i++) {
+      const p1 = this.coordinates[i];
+      const p2 = this.coordinates[i + 1];
+      if (x >= p1.x && x <= p2.x) {
+        const ratio = (x - p1.x) / (p2.x - p1.x);
+        return p1.y + ratio * (p2.y - p1.y);
+      }
+    }
+    return GAME_CONSTANTS.CANVAS_HEIGHT;
+  }
+
+
   private applyPhysicsForces() {
     // 5. Manual Reset Key (R) - checked first so player can bypass/skip delay if desired
     if (this.keys['KeyR']) {
@@ -441,6 +464,8 @@ export class GameEngine {
       return;
     }
 
+    // Dynamic wheel density scaling removed. Using stable static mass ratios instead to avoid solver impulse spikes.
+
     const isNitroPressed = this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.keys['KeyN'];
     const chassisAngle = this.bike.chassis.angle;
 
@@ -459,9 +484,10 @@ export class GameEngine {
         this.nitro = Math.max(0, this.nitro - GAME_CONSTANTS.NITRO_CONSUMPTION);
         torque *= GAME_CONSTANTS.NITRO_DISTANCE_MULTIPLIER;
         
-        // Thrust force along the bike's orientation
-        const forceX = Math.cos(chassisAngle) * GAME_CONSTANTS.NITRO_ACCEL_FORCE;
-        const forceY = Math.sin(chassisAngle) * GAME_CONSTANTS.NITRO_ACCEL_FORCE;
+        // Thrust force along the bike's orientation, scaled by chassis mass
+        const chassisMass = this.bike.chassis.mass;
+        const forceX = Math.cos(chassisAngle) * GAME_CONSTANTS.NITRO_ACCEL_FORCE * chassisMass;
+        const forceY = Math.sin(chassisAngle) * GAME_CONSTANTS.NITRO_ACCEL_FORCE * chassisMass;
         
         Body.applyForce(this.bike.chassis, this.bike.chassis.position, { x: forceX, y: forceY });
         
@@ -488,11 +514,14 @@ export class GameEngine {
       // Only rear wheel drives — front wheel torque caused bike to break apart
       this.bike.wheelA.torque = torque;
 
-      // Small chassis assist on ground (chassis-only, never wheels directly)
+      // Small chassis assist on ground (parallel to chassis orientation/slope, scaled by mass)
       if (this.isGrounded) {
+        const chassisMass = this.bike.chassis.mass;
+        const assistForceX = Math.cos(chassisAngle) * GAME_CONSTANTS.GROUND_TRACTION_FORCE * chassisMass;
+        const assistForceY = Math.sin(chassisAngle) * GAME_CONSTANTS.GROUND_TRACTION_FORCE * chassisMass;
         Body.applyForce(this.bike.chassis, this.bike.chassis.position, {
-          x: GAME_CONSTANTS.GROUND_TRACTION_FORCE,
-          y: 0,
+          x: assistForceX,
+          y: assistForceY,
         });
       }
     } 
@@ -508,23 +537,34 @@ export class GameEngine {
     }
 
     // 3. Lean controls (tilt rotation - active in air and on ground to get unstuck/wheelie)
-    const leanSpeed = this.isGrounded ? GAME_CONSTANTS.LEAN_SPEED_GROUND : GAME_CONSTANTS.LEAN_SPEED_AIR;
     const perpX = -Math.sin(chassisAngle);
     const perpY = Math.cos(chassisAngle);
     
-    if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
-      // Rotate counter-clockwise (lean back): apply upward force on front wheel, downward force on rear wheel (relative to chassis)
-      const forceMag = leanSpeed * 0.05 * this.bike.wheelB.mass;
-      Body.applyForce(this.bike.wheelB, this.bike.wheelB.position, { x: perpX * -forceMag, y: perpY * -forceMag });
-      Body.applyForce(this.bike.wheelA, this.bike.wheelA.position, { x: perpX * forceMag, y: perpY * forceMag });
-      this.bike.chassis.torque = -leanSpeed * 0.5;
-    }
-    if (this.keys['ArrowRight'] || this.keys['KeyD']) {
-      // Rotate clockwise (lean forward): apply downward force on front wheel, upward force on rear wheel (relative to chassis)
-      const forceMag = leanSpeed * 0.05 * this.bike.wheelA.mass;
-      Body.applyForce(this.bike.wheelB, this.bike.wheelB.position, { x: perpX * forceMag, y: perpY * forceMag });
-      Body.applyForce(this.bike.wheelA, this.bike.wheelA.position, { x: perpX * -forceMag, y: perpY * -forceMag });
-      this.bike.chassis.torque = leanSpeed * 0.5;
+    if (this.isGrounded) {
+      // Ground lean: apply torque and forces (scaled for new static mass ratios to maintain snappiness)
+      const leanSpeed = GAME_CONSTANTS.LEAN_SPEED_GROUND;
+      if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+        const forceMag = leanSpeed * 0.15 * this.bike.wheelB.mass;
+        Body.applyForce(this.bike.wheelB, this.bike.wheelB.position, { x: perpX * -forceMag, y: perpY * -forceMag });
+        Body.applyForce(this.bike.wheelA, this.bike.wheelA.position, { x: perpX * forceMag, y: perpY * forceMag });
+        this.bike.chassis.torque = -leanSpeed * 2.5;
+      }
+      if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+        const forceMag = leanSpeed * 0.15 * this.bike.wheelA.mass;
+        Body.applyForce(this.bike.wheelB, this.bike.wheelB.position, { x: perpX * forceMag, y: perpY * forceMag });
+        Body.applyForce(this.bike.wheelA, this.bike.wheelA.position, { x: perpX * -forceMag, y: perpY * -forceMag });
+        this.bike.chassis.torque = leanSpeed * 2.5;
+      }
+    } else {
+      // Air lean: direct angular velocity modification for fast, snappy flips and tricks!
+      const leanSpeed = GAME_CONSTANTS.LEAN_SPEED_AIR;
+      const deltaVel = leanSpeed * 0.12; // Snap rotation delta per frame
+      if (this.keys['ArrowLeft'] || this.keys['KeyA']) {
+        Body.setAngularVelocity(this.bike.chassis, Math.max(-GAME_CONSTANTS.LEAN_MAX_VELOCITY, this.bike.chassis.angularVelocity - deltaVel));
+      }
+      if (this.keys['ArrowRight'] || this.keys['KeyD']) {
+        Body.setAngularVelocity(this.bike.chassis, Math.min(GAME_CONSTANTS.LEAN_MAX_VELOCITY, this.bike.chassis.angularVelocity + deltaVel));
+      }
     }
     // Limit angular velocity to prevent crazy spinning
     const maxAngVel = GAME_CONSTANTS.LEAN_MAX_VELOCITY;
@@ -537,22 +577,21 @@ export class GameEngine {
     // 4. Jump (only if grounded)
     if (this.keys['Space']) {
       if (this.isGrounded && !this.wasJumpPressed) {
-        // Jump force: launch upward relative to world, and push forward to keep momentum
-        const jumpForceY = GAME_CONSTANTS.JUMP_IMPULSE * 0.28; // Upward force (negative)
-        const jumpForceX = Math.abs(jumpForceY) * 0.45;        // Forward push
+        // Direct velocity jump: set vertical velocity on chassis and wheels for a clean, frame-rate-independent jump impulse
+        const jumpVelY = GAME_CONSTANTS.JUMP_IMPULSE * 18; // Upward velocity (e.g. -0.38 * 18 = -6.84 px/ms)
+        const jumpVelX = Math.abs(jumpVelY) * 0.35;        // Forward push
         
-        // Apply force proportional to body mass to accelerate all parts identically
-        Body.applyForce(this.bike.chassis, this.bike.chassis.position, {
-          x: jumpForceX * this.bike.chassis.mass,
-          y: jumpForceY * this.bike.chassis.mass
+        Body.setVelocity(this.bike.chassis, {
+          x: this.bike.chassis.velocity.x + jumpVelX,
+          y: jumpVelY
         });
-        Body.applyForce(this.bike.wheelA, this.bike.wheelA.position, {
-          x: jumpForceX * this.bike.wheelA.mass,
-          y: jumpForceY * this.bike.wheelA.mass
+        Body.setVelocity(this.bike.wheelA, {
+          x: this.bike.wheelA.velocity.x + jumpVelX,
+          y: jumpVelY
         });
-        Body.applyForce(this.bike.wheelB, this.bike.wheelB.position, {
-          x: jumpForceX * this.bike.wheelB.mass,
-          y: jumpForceY * this.bike.wheelB.mass
+        Body.setVelocity(this.bike.wheelB, {
+          x: this.bike.wheelB.velocity.x + jumpVelX,
+          y: jumpVelY
         });
         
         this.wasJumpPressed = true;
@@ -571,6 +610,22 @@ export class GameEngine {
   }
 
   private evaluateScoresAndStatus() {
+    // Rider Head Crash Detection (Hill Climb Racing concept)
+    if (this.respawnDelayTimer === 0) {
+      const cPos = this.bike.chassis.position;
+      const cAngle = this.bike.chassis.angle;
+      const cos = Math.cos(cAngle);
+      const sin = Math.sin(cAngle);
+      const headWorldX = cPos.x - 3 * cos + 27 * sin;
+      const headWorldY = cPos.y - 3 * sin - 27 * cos;
+
+      const terrainY = this.getTerrainY(headWorldX);
+      if (headWorldY >= terrainY - 5) {
+        console.warn("HEAD CRASH:", { headWorldX, headWorldY, terrainY, cPos, cAngle });
+        this.handleRolloverCrash();
+      }
+    }
+
     const posX = this.bike.chassis.position.x;
     
     // Scoring based on furthest X distance reached
@@ -606,13 +661,21 @@ export class GameEngine {
       this.airTimeStart = null;
     }
 
-    // Cap velocity to avoid excessive physics bugs
-    const vel = this.bike.chassis.velocity;
-    if (Math.abs(vel.x) > GAME_CONSTANTS.MAX_SPEED) {
-      Body.setVelocity(this.bike.chassis, {
-        x: Math.sign(vel.x) * GAME_CONSTANTS.MAX_SPEED,
-        y: vel.y
-      });
+    // Cap horizontal velocity of chassis to avoid camera lag and cap vertical speed to a high limit
+    const chassisVel = this.bike.chassis.velocity;
+    let newVx = chassisVel.x;
+    let newVy = chassisVel.y;
+    
+    if (Math.abs(chassisVel.x) > GAME_CONSTANTS.MAX_SPEED) {
+      newVx = Math.sign(chassisVel.x) * GAME_CONSTANTS.MAX_SPEED;
+    }
+    const maxVerticalSpeed = 50; // Allow high vertical velocity for high jumps and steep drops
+    if (Math.abs(chassisVel.y) > maxVerticalSpeed) {
+      newVy = Math.sign(chassisVel.y) * maxVerticalSpeed;
+    }
+    
+    if (newVx !== chassisVel.x || newVy !== chassisVel.y) {
+      Body.setVelocity(this.bike.chassis, { x: newVx, y: newVy });
     }
 
     // Grounded checkpoints setter
@@ -638,16 +701,13 @@ export class GameEngine {
   private run = () => {
     if (this.isPaused || this.isGameOver) return;
 
+    // Reset grounding state at the start of each frame.
+    // The Matter.js collisionActive event handler will set it to true if the wheels are in contact with the ground.
+    this.isGrounded = false;
+
     // Clock check
     this.elapsedTime = (Date.now() - this.startTime) / 1000;
     const timeLeft = Math.max(0, this.totalDuration - this.elapsedTime);
-
-    // Defeat Check: Time's Up
-    if (timeLeft <= 0) {
-      this.isGameOver = true;
-      this.onGameOver('defeat', Math.round(this.score), this.elapsedTime, this.crashes, this.getProgressPercent());
-      return;
-    }
 
     // Calculate actual elapsed time since the last animation frame
     const now = performance.now();
@@ -657,8 +717,12 @@ export class GameEngine {
     // Cap delta to prevent physics explosions in case of extreme lag or browser tab freezing
     if (delta > 60) delta = 16.67;
 
-    // Run physics frame step with the calculated delta time for ultra-smooth rendering on high-refresh-rate screens (e.g. 120Hz ProMotion)
-    Engine.update(this.engine, delta);
+    // Run physics frame step in multiple substeps for high-speed stability and rigid constraint enforcement
+    const substeps = 4;
+    const substepDelta = delta / substeps;
+    for (let s = 0; s < substeps; s++) {
+      Engine.update(this.engine, substepDelta);
+    }
 
     // Handle respawn timer
     if (this.respawnDelayTimer > 0) {

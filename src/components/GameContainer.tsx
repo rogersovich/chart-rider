@@ -136,10 +136,9 @@ export default function GameContainer({ track }: GameContainerProps) {
         // All DOM updates — no setState here
         if (scoreRef.current) scoreRef.current.innerText = new Intl.NumberFormat('en-US').format(telemetry.score);
         if (timeRef.current) {
-          const t = formatTime(telemetry.timeLeft);
+          const t = formatTime(telemetry.time);
           timeRef.current.innerText = t;
-          // Flash red when under 10s
-          timeRef.current.style.color = telemetry.timeLeft <= 10 ? '#FF4D4D' : '';
+          timeRef.current.style.color = '';
         }
         if (speedRef.current) speedRef.current.innerText = `${Math.round(telemetry.speed)} km/h`;
         if (statusRef.current) statusRef.current.innerText = telemetry.status;
@@ -363,7 +362,7 @@ export default function GameContainer({ track }: GameContainerProps) {
 
         {/* Center: Timer */}
         <div className="flex flex-col items-center">
-          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">Time Remaining</span>
+          <span className="text-[9px] text-white/40 uppercase tracking-widest font-semibold">Time</span>
           <span
             ref={timeRef}
             className="font-mono font-black text-4xl text-white tabular-nums"
