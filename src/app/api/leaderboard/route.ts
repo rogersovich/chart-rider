@@ -22,8 +22,8 @@ export async function GET(req: NextRequest) {
     .select('id, username, score, time_secs, crashes, distance_percent, created_at')
     .eq('ticker', ticker)
     .eq('period', period)
-    .gte('created_at', `${date}T00:00:00+00:00`)
-    .lt('created_at', `${date}T23:59:59+00:00`)
+    .gte('created_at', `${date}T00:00:00+07:00`)
+    .lt('created_at', `${date}T23:59:59+07:00`)
     .order('score', { ascending: false })
     .limit(50);
 

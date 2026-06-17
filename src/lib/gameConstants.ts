@@ -26,7 +26,7 @@ export const GAME_CONSTANTS = {
   MAX_NITRO: 100,                // Max fuel capacity
   NITRO_CONSUMPTION: 0.5,        // Fuel consumed per frame
   NITRO_RECHARGE_RATE: 0.12,     // Fuel recharged per frame when grounded
-  NITRO_ACCEL_FORCE: 0.022,      // Extra horizontal thrust force during Nitro (stronger NOS)
+  NITRO_ACCEL_FORCE: 0.010,      // Extra horizontal thrust force during Nitro (stronger NOS)
   GROUND_TRACTION_FORCE: 0.012,  // Traction multiplier: force = torque × this (helps climb slopes)
   
   // Option B Crash Penalties & Recovery thresholds

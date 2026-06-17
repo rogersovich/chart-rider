@@ -103,14 +103,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Failed to save score.' }, { status: 500 });
   }
 
-  // Compute rank: count scores today that are strictly higher
-  const today = new Date().toISOString().slice(0, 10);
+  // Compute rank: count scores today (WIB) that are strictly higher
+  const wibOffset = 7 * 60 * 60 * 1000;
+  const todayWIB = new Date(Date.now() + wibOffset).toISOString().slice(0, 10);
   const { count } = await supabase
     .from('scores')
     .select('*', { count: 'exact', head: true })
     .eq('ticker', ticker.toUpperCase())
     .eq('period', period)
-    .gte('created_at', `${today}T00:00:00Z`)
+    .gte('created_at', `${todayWIB}T00:00:00+07:00`)
+    .lt('created_at', `${todayWIB}T23:59:59+07:00`)
     .gt('score', score);
 
   const rank = (count ?? 0) + 1;
