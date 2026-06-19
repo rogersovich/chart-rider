@@ -20,8 +20,8 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex flex-col items-center md:items-start gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center text-black font-heading font-extrabold shadow-md shadow-accent-glow">
-              🏍️
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center shadow-md shadow-accent-glow">
+              <img src="/icon.png" alt="ChartRider Logo" className="w-full h-full object-cover" />
             </div>
             <span className="font-heading font-extrabold text-lg tracking-wider">
               CHART<span className="text-accent">RIDER</span>

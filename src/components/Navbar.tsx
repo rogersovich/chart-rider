@@ -19,8 +19,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer group">
-          <div className="w-9 h-9 rounded-xl bg-accent flex items-center justify-center text-black font-heading font-extrabold text-xl shadow-lg shadow-accent-glow transition-transform duration-300 group-hover:scale-110">
-            🏍️
+          <div className="w-9 h-9 rounded-xl overflow-hidden flex items-center justify-center shadow-lg shadow-accent-glow transition-transform duration-300 group-hover:scale-110">
+            <img src="/icon.png" alt="ChartRider Logo" className="w-full h-full object-cover" />
           </div>
           <span className="font-heading font-extrabold text-2xl tracking-wider text-text-primary">
             CHART<span className="text-accent group-hover:brightness-110 transition-all duration-300">RIDER</span>
